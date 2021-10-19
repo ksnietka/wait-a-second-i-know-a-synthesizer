@@ -12,17 +12,26 @@
     <canvas id="frequency" width="800" height="600"></canvas>
     <input type="range" id="osc1-range" min="0" max="1000">
     <input type="range" id="osc2-range" min="0" max="1000">
+    <input type="range" id="filter-range" min="0" max="5000">
+    <input type="range" id="filter-q" min="0" max="100">
 
 <script>
     const ctx = new(window.AudioContext || window.webkitAudioContext)();
 
     const osc1 = ctx.createOscillator();
     const osc2 = ctx.createOscillator();
+    osc2.detune.linearRampToValueAtTime(1000, 10)
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass'
+
+    filter.frequency.setValueAtTime(199, 0)
 
 
     osc1.type = "sawtooth"
     osc2.type = "square"
     const gain = ctx.createGain();
+
 
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 512;
@@ -32,13 +41,15 @@
 
     osc2.connect(gain);
     osc1.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(filter);
+    filter.connect(ctx.destination);
 
 
     osc1.frequency.value = 1000
     osc2.frequency.value = 1000
+    filter.frequency.value = 10000
 
-    gain.connect(analyser);
+    filter.connect(analyser);
 
     osc1.start()
     osc2.start()
@@ -53,24 +64,7 @@
 
     const frexCtx = canvFreq.getContext('2d');
 
-
-
-    const singleRender = () => {
-        analyser.getByteTimeDomainData(timeInfo);
-
-        timeCtx.clearRect(0,0,800, 700)
-
-
-        timeCtx.moveTo(0, timeSizes.height)
-        timeCtx.beginPath();
-
-        for(let i = 0; i < bufferLength; i++) {
-            timeCtx.lineTo(i, timeSizes.height - timeInfo[i])
-        }
-        // timeCtx.closePath();
-        timeCtx.stroke();
-    }
-
+    const sliceWidth = 800 / bufferLength;
 
     const animate = () => {
         analyser.getByteFrequencyData(frequencyInfo);
@@ -83,9 +77,9 @@
         frexCtx.beginPath();
 
         for(let i = 0; i < bufferLength; i++) {
-            frexCtx.lineTo(i, 599 - frequencyInfo[i])
+            frexCtx.lineTo(i * sliceWidth, 599 - (frequencyInfo[i]))
         }
-        // timeCtx.closePath();
+
         frexCtx.stroke();
 
 
@@ -97,6 +91,8 @@
 
     const rangeOsc1 = document.getElementById('osc1-range')
     const rangeOsc2 = document.getElementById('osc2-range')
+    const rangeFilter = document.getElementById('filter-range')
+    const rangeQFilter = document.getElementById('filter-q')
 
     rangeOsc1.addEventListener('change', (data) => {
         console.log(data.target.value)
@@ -107,6 +103,17 @@
         console.log(data.target.value)
         osc2.frequency.setValueAtTime(data.target.value, 0)
     })
+
+    rangeFilter.addEventListener('change', (data) => {
+        console.log(data.target.value)
+        filter.frequency.setValueAtTime(data.target.value, 0)
+    })
+
+    rangeQFilter.addEventListener('change', (data) => {
+        console.log(data.target.value)
+        filter.Q.setValueAtTime(data.target.value, 0)
+    })
+
 
 
 
