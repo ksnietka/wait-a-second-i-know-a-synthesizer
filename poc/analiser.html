@@ -16,110 +16,101 @@
     <input type="range" id="filter-q" min="0" max="100">
 
 <script>
-    const ctx = new(window.AudioContext || window.webkitAudioContext)();
 
-    const osc1 = ctx.createOscillator();
-    const osc2 = ctx.createOscillator();
-    osc2.detune.linearRampToValueAtTime(1000, 10)
+    let osc1, osc2, filter, analyser, bufferLength, frequencyInfo, timeInfo, canvas, canvCtx;
 
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass'
+    function initOscillator() {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
 
-    filter.frequency.setValueAtTime(199, 0)
+        osc1 = ctx.createOscillator();
+        osc2 = ctx.createOscillator();
+        osc2.detune.linearRampToValueAtTime(1000, 10)
 
+        filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass'
 
-    osc1.type = "sawtooth"
-    osc2.type = "square"
-    const gain = ctx.createGain();
-
-
-    const analyser = ctx.createAnalyser();
-    analyser.fftSize = 512;
-    const bufferLength = analyser.frequencyBinCount;
-    const frequencyInfo = new Uint8Array(bufferLength);
-    const timeInfo = new Uint8Array(bufferLength);
-
-    osc2.connect(gain);
-    osc1.connect(gain);
-    gain.connect(filter);
-    filter.connect(ctx.destination);
+        filter.frequency.setValueAtTime(199, 0)
 
 
-    osc1.frequency.value = 1000
-    osc2.frequency.value = 1000
-    filter.frequency.value = 10000
-
-    filter.connect(analyser);
-
-    osc1.start()
-    osc2.start()
+        osc1.type = "sawtooth"
+        osc2.type = "square"
+        const gain = ctx.createGain();
 
 
+        analyser = ctx.createAnalyser();
+        analyser.fftSize = 512;
+        bufferLength = analyser.frequencyBinCount;
+        frequencyInfo = new Uint8Array(bufferLength);
+        timeInfo = new Uint8Array(bufferLength);
 
-    analyser.getByteFrequencyData(frequencyInfo);
-    analyser.getByteTimeDomainData(timeInfo);
 
-    const canvFreq = document.getElementById('frequency');
+        osc2.connect(gain);
+        osc1.connect(gain);
+        gain.connect(filter);
+        filter.connect(ctx.destination);
 
 
-    const frexCtx = canvFreq.getContext('2d');
+        osc1.frequency.value = 1000
+        osc2.frequency.value = 1000
+        filter.frequency.value = 10000
 
-    const sliceWidth = 800 / bufferLength;
+        filter.connect(analyser);
+
+        osc1.start()
+        osc2.start()
+    }
+
+    function initCanvas() {
+        canvas = document.getElementById('frequency');
+        canvCtx = canvas.getContext('2d');
+    }
+
+    function initHandlers() {
+        const rangeOsc1 = document.getElementById('osc1-range')
+        const rangeOsc2 = document.getElementById('osc2-range')
+        const rangeFilter = document.getElementById('filter-range')
+        const rangeQFilter = document.getElementById('filter-q')
+
+        rangeOsc1.addEventListener('change', (data) => {
+            console.log(data.target.value)
+            osc1.frequency.setValueAtTime(data.target.value, 0)
+        })
+
+        rangeOsc2.addEventListener('change', (data) => {
+            console.log(data.target.value)
+            osc2.frequency.setValueAtTime(data.target.value, 0)
+        })
+
+        rangeFilter.addEventListener('change', (data) => {
+            console.log(data.target.value)
+            filter.frequency.setValueAtTime(data.target.value, 0)
+        })
+
+        rangeQFilter.addEventListener('change', (data) => {
+            console.log(data.target.value)
+            filter.Q.setValueAtTime(data.target.value, 0)
+        })
+    }
 
     const animate = () => {
+        const sliceWidth = 800 /bufferLength;
         analyser.getByteFrequencyData(frequencyInfo);
         analyser.getByteTimeDomainData(timeInfo);
-
-        frexCtx.clearRect(0,0,800, 700)
-
-
-        frexCtx.moveTo(0,0)
-        frexCtx.beginPath();
+        canvCtx.clearRect(0,0,800, 700)
+        canvCtx.moveTo(0,0)
+        canvCtx.beginPath();
 
         for(let i = 0; i < bufferLength; i++) {
-            frexCtx.lineTo(i * sliceWidth, 599 - (frequencyInfo[i]))
+            canvCtx.lineTo(i * sliceWidth, 599 - (frequencyInfo[i]))
         }
-
-        frexCtx.stroke();
-
-
+        canvCtx.stroke();
         requestAnimationFrame(animate)
     }
 
-    animate()
-
-
-    const rangeOsc1 = document.getElementById('osc1-range')
-    const rangeOsc2 = document.getElementById('osc2-range')
-    const rangeFilter = document.getElementById('filter-range')
-    const rangeQFilter = document.getElementById('filter-q')
-
-    rangeOsc1.addEventListener('change', (data) => {
-        console.log(data.target.value)
-        osc1.frequency.setValueAtTime(data.target.value, 0)
-    })
-
-    rangeOsc2.addEventListener('change', (data) => {
-        console.log(data.target.value)
-        osc2.frequency.setValueAtTime(data.target.value, 0)
-    })
-
-    rangeFilter.addEventListener('change', (data) => {
-        console.log(data.target.value)
-        filter.frequency.setValueAtTime(data.target.value, 0)
-    })
-
-    rangeQFilter.addEventListener('change', (data) => {
-        console.log(data.target.value)
-        filter.Q.setValueAtTime(data.target.value, 0)
-    })
-
-
-
-
-
-
-
+    initOscillator();
+    initHandlers();
+    initCanvas();
+    animate();
 </script>
 
 </body>
