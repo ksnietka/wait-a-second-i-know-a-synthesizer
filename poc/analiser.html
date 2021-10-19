@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+
+    <canvas id="frequency" width="800" height="600"></canvas>
+    <input type="range" id="osc1-range" min="0" max="1000">
+    <input type="range" id="osc2-range" min="0" max="1000">
+
+<script>
+    const ctx = new(window.AudioContext || window.webkitAudioContext)();
+
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+
+
+    osc1.type = "sawtooth"
+    osc2.type = "square"
+    const gain = ctx.createGain();
+
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 512;
+    const bufferLength = analyser.frequencyBinCount;
+    const frequencyInfo = new Uint8Array(bufferLength);
+    const timeInfo = new Uint8Array(bufferLength);
+
+    osc2.connect(gain);
+    osc1.connect(gain);
+    gain.connect(ctx.destination);
+
+
+    osc1.frequency.value = 1000
+    osc2.frequency.value = 1000
+
+    gain.connect(analyser);
+
+    osc1.start()
+    osc2.start()
+
+
+
+    analyser.getByteFrequencyData(frequencyInfo);
+    analyser.getByteTimeDomainData(timeInfo);
+
+    const canvFreq = document.getElementById('frequency');
+
+
+    const frexCtx = canvFreq.getContext('2d');
+
+
+
+    const singleRender = () => {
+        analyser.getByteTimeDomainData(timeInfo);
+
+        timeCtx.clearRect(0,0,800, 700)
+
+
+        timeCtx.moveTo(0, timeSizes.height)
+        timeCtx.beginPath();
+
+        for(let i = 0; i < bufferLength; i++) {
+            timeCtx.lineTo(i, timeSizes.height - timeInfo[i])
+        }
+        // timeCtx.closePath();
+        timeCtx.stroke();
+    }
+
+
+    const animate = () => {
+        analyser.getByteFrequencyData(frequencyInfo);
+        analyser.getByteTimeDomainData(timeInfo);
+
+        frexCtx.clearRect(0,0,800, 700)
+
+
+        frexCtx.moveTo(0,0)
+        frexCtx.beginPath();
+
+        for(let i = 0; i < bufferLength; i++) {
+            frexCtx.lineTo(i, 599 - frequencyInfo[i])
+        }
+        // timeCtx.closePath();
+        frexCtx.stroke();
+
+
+        requestAnimationFrame(animate)
+    }
+
+    animate()
+
+
+    const rangeOsc1 = document.getElementById('osc1-range')
+    const rangeOsc2 = document.getElementById('osc2-range')
+
+    rangeOsc1.addEventListener('change', (data) => {
+        console.log(data.target.value)
+        osc1.frequency.setValueAtTime(data.target.value, 0)
+    })
+
+    rangeOsc2.addEventListener('change', (data) => {
+        console.log(data.target.value)
+        osc2.frequency.setValueAtTime(data.target.value, 0)
+    })
+
+
+
+
+
+
+</script>
+
+</body>
+</html>
