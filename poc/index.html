@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+<script>
+    const freq = {
+        C: 130.81 * 2,
+        D: 146.83 * 2,
+        E: 164.81 * 2,
+        F: 174.61 * 2,
+        G: 196.00 * 2,
+        A: 220.00 * 2,
+        H: 246.94 * 2,
+        C1: 130.81 * 4
+    }
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    const biquadFilter = audioCtx.createBiquadFilter();
+
+    const sawOscilator = audioCtx.createOscillator();
+    sawOscilator.type = 'sawtooth';
+
+    const sineOscilator = audioCtx.createOscillator();
+    sineOscilator.type = 'sine';
+
+    const lfo = audioCtx.createOscillator()
+    const lfoAmp = audioCtx.createGain()
+
+    const lfo2 =audioCtx.createOscillator();
+    const lfo2Amp = audioCtx.createGain();
+
+    lfo.connect(lfoAmp)
+    lfo2.connect(lfo2Amp)
+
+    lfoAmp.gain.setValueAtTime(10, 0)
+    lfo.frequency.value = 10;
+
+    lfo2Amp.gain.value = 1000;
+    lfo2.frequency.value = 0.5;
+
+    const amp = audioCtx.createGain();
+
+    lfoAmp.connect(sawOscilator.frequency)
+
+    sineOscilator.connect(amp)
+    sawOscilator.connect(amp)
+
+    amp.connect(biquadFilter)
+
+    lfo2Amp.connect(biquadFilter.frequency)
+    biquadFilter.type = "lowpass";
+
+    biquadFilter.connect(audioCtx.destination)
+
+    current = 0;
+
+    for(let [,value] of Object.entries(freq))  {
+        const next = current++;
+        sawOscilator.frequency.setValueAtTime(value, next);
+        sineOscilator.frequency.setValueAtTime(value+ 1, next);
+    }
+
+    sineOscilator.start();
+    sawOscilator.start();
+    lfo.start()
+    amp.start()
+</script>
+
+</body>
+</html>
