@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+
+<script>
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    navigator.requestMIDIAccess()
+        .then(onMIDISuccess, onMIDIFailure);
+
+    function onMIDISuccess(midiAccess) {
+        for (let input of midiAccess.inputs.values()) {
+            input.onmidimessage = getMIDIMessage;
+        }
+    }
+
+    function getMIDIMessage(midiMessage) {
+        console.log(midiMessage.data);
+    }
+    function onMIDIFailure() {
+        console.log('Could not access your MIDI devices.');
+    }
+
+    let pressed = new Set([]);
+
+    const freq = {
+        C: 130.81 /2 ,
+        D: 146.83 /2,
+        E: 164.81 /2,
+        F: 174.61 /2,
+        G: 196.00 /2,
+        A: 220.00 /2,
+        H: 246.94 /2,
+        C1: 130.81
+    }
+    let current = 0
+
+    const attac = 100;
+    const attacValue = 2;
+    const decay = 100;
+    const sustain = 1;
+    const release = 100
+
+    const resolution = 32;
+    const calculateHarmonic = baseTone => {
+        const harmonics = [];
+        (new Array(resolution).fill(null)).reduce((acc, curr) => {
+            harmonics.push(acc)
+            return acc + (baseTone/2)
+        }, baseTone /2)
+        return harmonics;
+    }
+
+    const populateTone = (freq, oscilatorBank) => {
+        const harmonics = calculateHarmonic(freq);
+        harmonics.forEach((harmonic, index) => {
+            oscilatorBank[index].frequency.linearRampToValueAtTime(harmonic, ctx.currentTime + 0.1);
+        })
+    }
+
+    const releaseTone = () => {
+        masterGain.gain.linearRampToValueAtTime(0, ctx.currentTime + (release/1000))
+    }
+
+    const oscilatorBank = (new Array(resolution).fill(null)).map(item => ctx.createOscillator());
+    const gainsBank = (new Array(resolution).fill(null)).map(item => ctx.createGain());
+    const masterGain = ctx.createGain();
+    masterGain.connect(ctx.destination)
+
+    oscilatorBank.forEach((oscilator, index) => {
+        const gain = gainsBank[index]
+        oscilator.connect(gain);
+        gain.connect(masterGain)
+    })
+
+
+    oscilatorBank.forEach((osc, i) => osc.start());
+    masterGain.gain.setValueAtTime(0, 0)
+
+    for (let i = 0; i < resolution; i++) {
+        const input = document.createElement('input')
+        input.type = 'range'
+        input.setAttribute('min', '0');
+        input.setAttribute('max', '100');
+        input.setAttribute('value', '100');
+        input.setAttribute('index', `${i}`);
+
+        input.addEventListener('change', e => {
+            const index = Number(e.target.getAttribute('index'));
+            gainsBank[index].gain.setValueAtTime(Number(e.target.value)/100, 0);
+        })
+
+        document.body.append(input)
+    }
+
+    document.addEventListener('keydown', e => {
+        const scale = Object.values(freq);
+        const index = Number(e.key);
+        populateTone(scale[index], oscilatorBank)
+        if(!pressed.size) {
+            masterGain.gain.linearRampToValueAtTime(attacValue, ctx.currentTime + (attac/ 1000));
+            masterGain.gain.linearRampToValueAtTime(sustain, ctx.currentTime + (attac + decay)/1000)
+        }
+        console.log(pressed)
+
+        pressed.add(e.key);
+    })
+
+    document.addEventListener('keyup', e => {
+        console.log(e, pressed)
+        pressed.delete(e.key);
+        console.log(pressed)
+        if(pressed.size === 0) {
+            releaseTone();
+        }
+    })
+
+
+
+</script>
+<style>
+    input {
+        display: block;
+    }
+</style>
+
+</body>
+</html>
