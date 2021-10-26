@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oscilloscope</title>
+</head>
+
+<body>
+  <button id="start-button">START</button>
+  <button id="stop-button">STOP</button>
+  <canvas id="oscilloscope" width="800" height="600"></canvas>
+
+
+  <script>
+    var canvas, canvCtx, osc1, analyser, bufferLength, timeInfo;
+
+    function initOscillator() {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+      osc1 = ctx.createOscillator();
+      osc1.type = 'sine';
+
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      bufferLength = analyser.frequencyBinCount;
+      timeInfo = new Uint8Array(bufferLength);
+
+      osc1.connect(ctx.destination);
+      osc1.connect(analyser);
+
+      osc1.start();
+    }
+
+    function initCanvas() {
+      canvas = document.getElementById('oscilloscope');
+      canvCtx = canvas.getContext('2d');
+    }
+
+    function animate() {
+      const sliceWidth = 800 / bufferLength;
+      analyser.getByteTimeDomainData(timeInfo);
+
+      canvCtx.clearRect(0, 0, 800, 700)
+      canvCtx.moveTo(0, 0)
+      canvCtx.beginPath();
+
+      for (let i = 0; i < bufferLength; i++) {
+        canvCtx.lineTo(i * sliceWidth, 599 - (timeInfo[i]))
+      }
+      canvCtx.stroke();
+
+      requestAnimationFrame(animate)
+    }
+
+    document.getElementById('start-button').addEventListener('click', () => {
+      initOscillator();
+      initCanvas();
+      animate();
+    })
+
+    document.getElementById('stop-button').addEventListener('click', () => {
+      osc1.stop();
+    })
+
+  </script>
+</body>
+
+</html>

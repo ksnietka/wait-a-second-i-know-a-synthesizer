@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Keyboard mono synth</title>
+
+  <style>
+    .synth-panel {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .synth-switch {
+      display: block;
+      margin-right: 20px;
+    }
+
+    .synth-switch.on {
+      background-color: chartreuse;
+    }
+
+    .keyboard {
+      display: inline-flex;
+      margin: 0;
+      padding: 0;
+      border: 1px solid black;
+    }
+
+    .key {
+      display: block;
+      border: 1px black solid;
+      box-sizing: border-box;
+    }
+
+    .white {
+      width: 50px;
+      height: 150px;
+      background-color: white;
+      margin-left: -20px;
+    }
+
+    .white:first-of-type,
+    .white+.white {
+      margin-left: 0;
+    }
+
+    .black {
+      width: 40px;
+      height: 100px;
+      background-color: black;
+      margin-left: -20px;
+      z-index: 10;
+    }
+
+    .key button {
+      background-color: transparent;
+      width: 100%;
+      height: 100%;
+      border: none;
+      cursor: pointer;
+    }
+
+    .key button.active {
+      background-color: aquamarine;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="synth-panel">
+    <button id="synth-switch" class="synth-switch">on/off</button>
+
+    <select id="wave-form">
+      <option value="sine">SINE</option>
+      <option value="square">SQUARE</option>
+      <option value="sawtooth">SAWTOOTH</option>
+      <option value="triangle">TRIANGLE</option>
+    </select>
+  </div>
+
+  <ul id="keyboard" class="keyboard">
+    <li class="key white"><button id="C4"></button></li>
+    <li class="key black"><button id="C#4"></button></li>
+    <li class="key white"><button id="D4"></button></li>
+    <li class="key black"><button id="D#4"></button></li>
+    <li class="key white"><button id="E4"></button></li>
+    <li class="key white"><button id="F4"></button></li>
+    <li class="key black"><button id="F#4"></button></li>
+    <li class="key white"><button id="G4"></button></li>
+    <li class="key black"><button id="G#4"></button></li>
+    <li class="key white"><button id="A4"></button></li>
+    <li class="key black"><button id="A#4"></button></li>
+    <li class="key white"><button id="B4"></button></li>
+    <li class="key white"><button id="C5"></button></li>
+  </ul>
+
+
+  <script>
+    const notes = [
+      {
+        note: 'C4',
+        frequency: 261.63,
+        key: 'a'
+      },
+      {
+        note: 'C#4',
+        frequency: 277.18,
+        key: 'w'
+      },
+      {
+        note: 'D4',
+        frequency: 293.66,
+        key: 's'
+      },
+      {
+        note: 'D#4',
+        frequency: 311.13,
+        key: 'e'
+      },
+      {
+        note: 'E4',
+        frequency: 329.63,
+        key: 'd'
+      },
+      {
+        note: 'F4',
+        frequency: 349.23,
+        key: 'f'
+      },
+      {
+        note: 'F#4',
+        frequency: 369.99,
+        key: 't'
+      },
+      {
+        note: 'G4',
+        frequency: 392.00,
+        key: 'g'
+      },
+      {
+        note: 'G#4',
+        frequency: 415.30,
+        key: 'y'
+      },
+      {
+        note: 'A4',
+        frequency: 440.00,
+        key: 'h'
+      },
+      {
+        note: 'A#4',
+        frequency: 466.16,
+        key: 'u'
+      },
+      {
+        note: 'B4',
+        frequency: 493.88,
+        key: 'j'
+      },
+      {
+        note: 'C5',
+        frequency: 523.25,
+        key: 'k'
+      }
+    ]
+
+
+    let ctx, osc1, synthSwitch, waveForm;
+    let isStarted = false;
+
+
+    function noteOn(frequency) {
+      osc1.frequency.setValueAtTime(frequency, ctx.currentTime);
+
+      if (!isStarted) {
+        osc1.start();
+        isStarted = true;
+      } else {
+        ctx.resume();
+      }
+    }
+
+    function noteOff() {
+      ctx.suspend();
+    }
+
+
+    function emitEvent(eventKey, frequency) {
+      if (!ctx && !osc1) return;
+
+      const events = { noteOn, noteOff };
+      events[eventKey](frequency);
+    }
+
+
+    function useKeyboard(emitEvent) {
+      if (!emitEvent) {
+        return;
+      }
+
+      const addActiveClass = (currentNote) => {
+        document.getElementById(currentNote.note).classList.add('active');
+      }
+
+      const removeActiveClass = (currentNote) => {
+        document.getElementById(currentNote.note).classList.remove('active');
+      }
+
+      const keyboard = document.getElementById('keyboard');
+
+      keyboard.addEventListener('mousedown', (event) => {
+        const currentNote = notes.find(({ note }) => note === event.target.id)
+
+        if (currentNote) {
+          addActiveClass(currentNote);
+          emitEvent('noteOn', currentNote.frequency);
+        }
+      })
+
+      keyboard.addEventListener('mouseup', (event) => {
+        const currentNote = notes.find(({ note }) => note === event.target.id)
+
+        if (currentNote) {
+          removeActiveClass(currentNote);
+          emitEvent('noteOff', currentNote.frequency);
+        }
+      })
+
+      window.addEventListener('keydown', (event) => {
+        const currentNote = notes.find(({ key }) => event.key === key)
+
+        if (currentNote) {
+          addActiveClass(currentNote);
+          emitEvent('noteOn', currentNote.frequency);
+        }
+      })
+
+      window.addEventListener('keyup', (event) => {
+        const currentNote = notes.find(({ key }) => event.key === key)
+
+        if (currentNote) {
+          removeActiveClass(currentNote);
+          emitEvent('noteOff', currentNote.frequency);
+        }
+      })
+    }
+
+
+    function initSynth() {
+      synthSwitch = document.getElementById('synth-switch');
+      waveForm = document.getElementById('wave-form');
+
+      synthSwitch.addEventListener('click', () => {
+        if (ctx || osc1) {
+          if (isStarted) {
+            osc1.stop();
+            isStarted = false;
+          }
+
+          ctx.close();
+
+          ctx = null;
+          osc1 = null;
+
+          synthSwitch.classList.remove('on')
+
+          return;
+        }
+
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        osc1 = ctx.createOscillator();
+        osc1.connect(ctx.destination);
+        osc1.type = waveForm.value;
+
+        synthSwitch.classList.add('on');
+      })
+
+      waveForm.addEventListener('change', (event) => {
+        if (osc1) {
+          osc1.type = event.target.value;
+
+          event.target.blur();
+        }
+      })
+    }
+
+    initSynth();
+    useKeyboard(emitEvent);
+  </script>
+</body>
+
+</html>
